@@ -35,8 +35,8 @@ const IntroVideo = ({ onComplete }: IntroVideoProps) => {
       try {
         await video.play();
       } catch {
-        completeIntro();
-        return;
+        // Safari puede rechazar play() mientras todavía está cargando.
+        // El atributo autoPlay y onCanPlay vuelven a intentarlo al estar listo.
       }
 
       requestAnimationFrame(() => setIsVisible(true));
@@ -77,9 +77,12 @@ const IntroVideo = ({ onComplete }: IntroVideoProps) => {
         playsInline
         muted
         preload="auto"
-        onCanPlay={() => setIsVisible(true)}
-        onStalled={completeIntro}
-        onAbort={completeIntro}
+        onCanPlay={(event) => {
+          setIsVisible(true);
+          if (event.currentTarget.paused) {
+            void event.currentTarget.play().catch(() => undefined);
+          }
+        }}
         onTimeUpdate={(event) => {
           const video = event.currentTarget;
           if (video.duration && video.duration - video.currentTime <= 0.5) {
