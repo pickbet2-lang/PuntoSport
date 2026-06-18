@@ -16,11 +16,6 @@ const IntroVideo = ({ onComplete }: IntroVideoProps) => {
     }
 
     hasCompletedRef.current = true;
-    try {
-      window.sessionStorage.setItem("punto-sport-intro-seen", "true");
-    } catch {
-      // Algunos navegadores privados bloquean el almacenamiento.
-    }
     onComplete();
   }, [onComplete]);
 
@@ -30,33 +25,18 @@ const IntroVideo = ({ onComplete }: IntroVideoProps) => {
       return;
     }
 
-    try {
-      if (window.sessionStorage.getItem("punto-sport-intro-seen") === "true") {
-        completeIntro();
-        return;
-      }
-    } catch {
-      // Si no hay almacenamiento disponible, la intro continúa normalmente.
-    }
-
-    const isAndroid = /Android/i.test(window.navigator.userAgent);
-    const safetyTimeout = window.setTimeout(completeIntro, isAndroid ? 4500 : 8000);
+    const safetyTimeout = window.setTimeout(completeIntro, 15_000);
 
     const tryAutoplay = async () => {
-      video.muted = isAndroid;
-      video.volume = 1;
+      video.muted = true;
+      video.defaultMuted = true;
+      video.volume = 0;
 
       try {
         await video.play();
       } catch {
-        video.muted = true;
-
-        try {
-          await video.play();
-        } catch {
-          completeIntro();
-          return;
-        }
+        completeIntro();
+        return;
       }
 
       requestAnimationFrame(() => setIsVisible(true));
@@ -64,7 +44,20 @@ const IntroVideo = ({ onComplete }: IntroVideoProps) => {
 
     void tryAutoplay();
 
-    return () => window.clearTimeout(safetyTimeout);
+    const resumeAutoplay = () => {
+      if (!video.ended && video.paused && document.visibilityState === "visible") {
+        void tryAutoplay();
+      }
+    };
+
+    window.addEventListener("pageshow", resumeAutoplay);
+    document.addEventListener("visibilitychange", resumeAutoplay);
+
+    return () => {
+      window.clearTimeout(safetyTimeout);
+      window.removeEventListener("pageshow", resumeAutoplay);
+      document.removeEventListener("visibilitychange", resumeAutoplay);
+    };
   }, [completeIntro]);
 
   const finishIntro = () => {
@@ -80,9 +73,10 @@ const IntroVideo = ({ onComplete }: IntroVideoProps) => {
     >
       <video
         ref={videoRef}
+        autoPlay
         playsInline
         muted
-        preload="metadata"
+        preload="auto"
         onCanPlay={() => setIsVisible(true)}
         onStalled={completeIntro}
         onAbort={completeIntro}
