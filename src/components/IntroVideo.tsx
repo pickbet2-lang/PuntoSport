@@ -93,7 +93,7 @@ const IntroVideo = ({ onComplete }: IntroVideoProps) => {
         onError={completeIntro}
         className="h-full w-full object-cover"
       >
-        <source src="/intro-punto-sport.mp4" type="video/mp4" />
+        <source src="/intro-punto-sport-mobile-v2.mp4" type="video/mp4" />
       </video>
     </main>
   );
